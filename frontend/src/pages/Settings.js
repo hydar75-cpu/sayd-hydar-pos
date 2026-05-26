@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import RouteSettings from './RouteSettings';
 
-function Settings({ user, warehouses, setWarehouses, persons, setPersons }) {
+function Settings({ user, warehouses, setWarehouses, persons, setPersons, routes, setRoutes }) {
   const navigate = useNavigate();
   const [currentSection, setCurrentSection] = useState(null);
 
@@ -15,12 +16,25 @@ function Settings({ user, warehouses, setWarehouses, persons, setPersons }) {
 
   const settingsItems = [
     { title: 'المخازن', icon: '🏭', section: 'warehouses' },
+    { title: 'خط السير', icon: '🗺️', section: 'routes' },
     { title: 'الصلاحيات', icon: '🔑', section: 'permissions' },
     { title: 'النسخ الاحتياطي', icon: '💾', section: 'backup' },
     { title: 'إعدادات الطباعة', icon: '🖨️', section: 'printer' },
     { title: 'سجل العمليات', icon: '📋', section: 'logs' },
     { title: 'حول النظام', icon: 'ℹ️', section: 'about' },
   ];
+
+  if (currentSection === 'warehouses') {
+    return <WarehousesSection onBack={() => setCurrentSection(null)} warehouses={warehouses} setWarehouses={setWarehouses} />;
+  }
+
+  if (currentSection === 'routes') {
+    return <RouteSettings onBack={() => setCurrentSection(null)} persons={persons} routes={routes} setRoutes={setRoutes} />;
+  }
+
+  if (currentSection === 'permissions') {
+    return <PermissionsSection onBack={() => setCurrentSection(null)} persons={persons} setPersons={setPersons} />;
+  }
 
   const styles = {
     screen: { minHeight: '100vh', backgroundColor: '#f0f4f8' },
@@ -34,14 +48,6 @@ function Settings({ user, warehouses, setWarehouses, persons, setPersons }) {
     menuText: { fontWeight: '600', fontSize: '13px', color: '#374151' },
   };
 
-  if (currentSection === 'warehouses') {
-    return <WarehousesSection onBack={() => setCurrentSection(null)} warehouses={warehouses} setWarehouses={setWarehouses} />;
-  }
-
-  if (currentSection === 'permissions') {
-    return <PermissionsSection onBack={() => setCurrentSection(null)} persons={persons} setPersons={setPersons} />;
-  }
-
   return (
     <div style={styles.screen}>
       <div style={styles.header}>
@@ -54,6 +60,7 @@ function Settings({ user, warehouses, setWarehouses, persons, setPersons }) {
           {settingsItems.map((item, index) => (
             <div key={index} style={styles.menuItem} onClick={() => {
               if (item.section === 'warehouses') setCurrentSection('warehouses');
+              else if (item.section === 'routes') setCurrentSection('routes');
               else if (item.section === 'permissions') setCurrentSection('permissions');
               else alert(`إعدادات ${item.title} ستتوفر قريباً`);
             }}>
@@ -82,7 +89,7 @@ function WarehousesSection({ onBack, warehouses, setWarehouses }) {
   };
 
   const handleDelete = (warehouse) => {
-    if (warehouse.hasTransactions) { alert('لا يمكن حذف هذا المخزن لأنه مرتبط بعمليات سابقة'); return; }
+    if (warehouse.hasTransactions) { alert('لا يمكن حذف هذا المخزن'); return; }
     if (warehouses.length <= 1) { alert('يجب وجود مخزن واحد على الأقل'); return; }
     if (window.confirm(`حذف ${warehouse.name}؟`)) {
       setWarehouses(warehouses.filter(w => w.id !== warehouse.id));
@@ -110,10 +117,7 @@ function WarehousesSection({ onBack, warehouses, setWarehouses }) {
         )}
         {warehouses.map(w => (
           <div key={w.id} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '15px', marginBottom: '8px', display: 'flex', alignItems: 'center', borderRight: w.hasTransactions ? '3px solid #06b6d4' : 'none' }}>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: '600', fontSize: '15px' }}>🏭 {w.name} {w.hasTransactions ? '🔒' : ''}</p>
-              <p style={{ fontSize: '12px', color: '#9ca3af' }}>📍 {w.location || 'غير محدد'}</p>
-            </div>
+            <div style={{ flex: 1 }}><p style={{ fontWeight: '600', fontSize: '15px' }}>🏭 {w.name} {w.hasTransactions ? '🔒' : ''}</p><p style={{ fontSize: '12px', color: '#9ca3af' }}>📍 {w.location || 'غير محدد'}</p></div>
             <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }} onClick={() => handleDelete(w)}>🗑️</button>
           </div>
         ))}
@@ -152,21 +156,12 @@ function PermissionsSection({ onBack, persons, setPersons }) {
         {salespersons.map(sp => (
           <div key={sp.id} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '15px', marginBottom: '8px', display: 'flex', alignItems: 'center', borderRight: sp.isManager ? '3px solid #f59e0b' : '3px solid #e5e7eb' }}>
             <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: '600', fontSize: '15px' }}>
-                {sp.name} {sp.isManager ? '👑' : ''}
-              </p>
+              <p style={{ fontWeight: '600', fontSize: '15px' }}>{sp.name} {sp.isManager ? '👑' : ''}</p>
               <p style={{ fontSize: '12px', color: '#6b7280' }}>👤 {sp.username}</p>
               <p style={{ fontSize: '12px', color: '#6b7280' }}>🔑 {sp.password}</p>
-              <p style={{ fontSize: '11px', color: sp.isManager ? '#f59e0b' : '#10b981', marginTop: '3px' }}>
-                {sp.isManager ? 'مدير النظام - صلاحيات كاملة' : 'مندوب - صلاحيات محدودة'}
-              </p>
+              <p style={{ fontSize: '11px', color: sp.isManager ? '#f59e0b' : '#10b981', marginTop: '3px' }}>{sp.isManager ? 'مدير النظام - صلاحيات كاملة' : 'مندوب - صلاحيات محدودة'}</p>
             </div>
-            <button
-              style={{ padding: '8px 12px', backgroundColor: '#2563eb', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px' }}
-              onClick={() => { setSelectedUser(sp); setShowPasswordForm(true); setNewPassword(''); }}
-            >
-              تغيير كلمة المرور
-            </button>
+            <button style={{ padding: '8px 12px', backgroundColor: '#2563eb', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px' }} onClick={() => { setSelectedUser(sp); setShowPasswordForm(true); setNewPassword(''); }}>تغيير كلمة المرور</button>
           </div>
         ))}
       </div>
@@ -176,13 +171,7 @@ function PermissionsSection({ onBack, persons, setPersons }) {
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', width: '100%', maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
             <p style={{ fontWeight: 'bold', fontSize: '18px', textAlign: 'center', marginBottom: '15px' }}>تغيير كلمة المرور</p>
             <p style={{ textAlign: 'center', marginBottom: '10px' }}>{selectedUser.name}</p>
-            <input
-              style={{ width: '100%', padding: '12px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '16px', textAlign: 'right', marginBottom: '10px' }}
-              type="password"
-              placeholder="كلمة المرور الجديدة"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
+            <input style={{ width: '100%', padding: '12px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '16px', textAlign: 'right', marginBottom: '10px' }} type="password" placeholder="كلمة المرور الجديدة" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             <div style={{ display: 'flex', gap: '10px' }}>
               <button style={{ flex: 1, padding: '12px', backgroundColor: '#10b981', color: 'white', borderRadius: '12px', border: 'none', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleChangePassword}>حفظ</button>
               <button style={{ flex: 1, padding: '12px', backgroundColor: 'white', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '16px', fontWeight: '600', cursor: 'pointer', color: '#6b7280' }} onClick={() => setShowPasswordForm(false)}>إلغاء</button>
