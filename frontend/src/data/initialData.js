@@ -8,13 +8,13 @@ export const INITIAL_PRODUCTS = [
 ];
 
 export const INITIAL_WAREHOUSES = [
-  { id: 1, name: 'المخزن الرئيسي', hasTransactions: true, userId: 5 },
-  { id: 2, name: 'مخزن الفرع الثاني', hasTransactions: false, userId: 6 },
+  { id: 1, name: 'المخزن الرئيسي', hasTransactions: true, userId: 1 },
+  { id: 2, name: 'مخزن الفرع الثاني', hasTransactions: false, userId: 2 },
 ];
 
 export const INITIAL_CASHBOXES = [
-  { id: 1, name: 'صندوق المبيعات', balance: 100000, userId: 5 },
-  { id: 2, name: 'صندوق مندوب ٢', balance: 50000, userId: 6 },
+  { id: 1, name: 'صندوق المبيعات', balance: 100000, userId: 1 },
+  { id: 2, name: 'صندوق مندوب ٢', balance: 50000, userId: 2 },
 ];
 
 export const INITIAL_INVENTORY = [
@@ -29,12 +29,22 @@ export const INITIAL_INVENTORY = [
 ];
 
 export const INITIAL_PERSONS = [
-  { id: 1, type: 'عميل', name: 'أحمد محمد', phone: '07701234567', address: 'بغداد - المنصور', balance: 0, hasTransactions: true },
-  { id: 2, type: 'عميل', name: 'علي حسين', phone: '07702345678', address: 'بغداد - الكرادة', balance: 5000, hasTransactions: true },
-  { id: 3, type: 'عميل', name: 'عميل نقدي', phone: '00000000', address: '-', balance: 0, hasTransactions: false },
-  { id: 4, type: 'مورد', name: 'شركة المواد الغذائية', phone: '07801112233', address: 'بغداد - باب الشيخ', balance: 0, hasTransactions: false },
-  { id: 5, type: 'مندوب', name: 'حسن كريم', phone: '0770998877', address: 'بغداد - الصدرية', balance: 0, hasTransactions: false },
-  { id: 6, type: 'مندوب', name: 'مندوب ٢', phone: '0770000000', address: '-', balance: 0, hasTransactions: false },
+  {
+    id: 1,
+    type: 'مندوب',
+    name: 'مدير النظام',
+    username: 'مدير النظام',
+    password: '1',
+    phone: '07700000000',
+    address: 'الإدارة الرئيسية',
+    balance: 0,
+    hasTransactions: false,
+    isManager: true,
+  },
+  { id: 2, type: 'عميل', name: 'أحمد محمد', phone: '07701234567', address: 'بغداد - المنصور', balance: 0, hasTransactions: true },
+  { id: 3, type: 'عميل', name: 'علي حسين', phone: '07702345678', address: 'بغداد - الكرادة', balance: 5000, hasTransactions: true },
+  { id: 4, type: 'عميل', name: 'عميل نقدي', phone: '00000000', address: '-', balance: 0, hasTransactions: false },
+  { id: 5, type: 'مورد', name: 'شركة المواد الغذائية', phone: '07801112233', address: 'بغداد - باب الشيخ', balance: 0, hasTransactions: false },
 ];
 
 export const INITIAL_INVOICES = [];
