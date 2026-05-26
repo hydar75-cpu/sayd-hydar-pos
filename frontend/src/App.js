@@ -28,6 +28,7 @@ function App() {
   const [activeCashBoxId, setActiveCashBoxId] = useState(INITIAL_CASHBOXES[0].id);
   const [routes, setRoutes] = useState(INITIAL_ROUTES);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [pendingCash, setPendingCash] = useState(null);
 
   const handleLogin = (userData) => {
     setUser(userData);
@@ -82,7 +83,7 @@ function App() {
           } />
           <Route path="/cash" element={
             canAccess('/cash') ? <Cash user={user} cashBoxes={cashBoxes} setCashBoxes={setCashBoxes}
-              activeCashBoxId={activeCashBoxId} />
+              activeCashBoxId={activeCashBoxId} pendingCash={pendingCash} setPendingCash={setPendingCash} />
             : <Navigate to="/" />
           } />
           <Route path="/products" element={
@@ -95,7 +96,8 @@ function App() {
           } />
           <Route path="/route" element={
             <RoutePage user={user} routes={routes} setRoutes={setRoutes}
-              persons={persons} setSelectedCustomer={setSelectedCustomer} />
+              persons={persons} setSelectedCustomer={setSelectedCustomer}
+              setPendingCash={setPendingCash} />
           } />
           <Route path="/settings" element={
             canAccess('/settings') ? <Settings user={user} warehouses={warehouses} setWarehouses={setWarehouses}
