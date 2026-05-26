@@ -10,18 +10,19 @@ function Dashboard({ user, onLogout, cashBoxes, activeCashBoxId, warehouses, inv
   const totalStock = userInventory.reduce((sum, i) => sum + i.quantity, 0);
 
   const allMenuItems = [
-    { title: 'المبيعات', path: '/sale', color: '#2563eb', icon: '🛒', permission: 'sale' },
-    { title: 'مرتجع بيع', path: '/return', color: '#ef4444', icon: '↩️', permission: 'return' },
-    { title: 'الصندوق', path: '/cash', color: '#10b981', icon: '💰', permission: 'cash' },
-    { title: 'مشتريات', path: '/purchase', color: '#06b6d4', icon: '📥', permission: 'purchase' },
-    { title: 'المواد', path: '/products', color: '#f59e0b', icon: '📦', permission: 'products' },
-    { title: 'الأشخاص', path: '/persons', color: '#8b5cf6', icon: '👥', permission: 'persons' },
-    { title: 'ضبط النظام', path: '/settings', color: '#6b7280', icon: '⚙️', permission: 'settings' },
+    { title: 'المبيعات', path: '/sale', color: '#2563eb', icon: '🛒' },
+    { title: 'مرتجع بيع', path: '/return', color: '#ef4444', icon: '↩️' },
+    { title: 'الصندوق', path: '/cash', color: '#10b981', icon: '💰' },
+    { title: 'مشتريات', path: '/purchase', color: '#06b6d4', icon: '📥' },
+    { title: 'المواد', path: '/products', color: '#f59e0b', icon: '📦' },
+    { title: 'الأشخاص', path: '/persons', color: '#8b5cf6', icon: '👥' },
+    { title: 'خط السير', path: '/route', color: '#ec4899', icon: '🗺️' },
+    { title: 'ضبط النظام', path: '/settings', color: '#6b7280', icon: '⚙️' },
   ];
 
   const menuItems = user.isManager
-    ? allMenuItems
-    : allMenuItems.filter(item => item.permission !== 'settings' && item.permission !== 'purchase' && item.permission !== 'products');
+    ? allMenuItems.filter(item => item.path !== '/route')
+    : allMenuItems.filter(item => ['/sale', '/return', '/cash', '/route'].includes(item.path));
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f0f4f8' }}>
