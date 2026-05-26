@@ -19,6 +19,12 @@ function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId }) {
   const activeCashBox = cashBoxes.find(cb => cb.id === activeCashBoxId) || cashBoxes[0];
   const availableCashBoxes = user.isManager ? cashBoxes : cashBoxes.filter(cb => cb.userId === user.userId);
 
+  // المندوب العادي: قبض ودفع فقط
+  // المدير: قبض، دفع، مناقلة
+  const transactionTypes = user.isManager
+    ? ['قبض', 'مناقلة', 'دفع']
+    : ['قبض', 'دفع'];
+
   const getLocation = async () => {
     setLoadingLocation(true);
     try { const pos = await getCurrentPosition(); setCurrentLocation(pos); } catch (err) {}
@@ -35,6 +41,7 @@ function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId }) {
     const numAmount = parseInt(parseNumber(amount));
 
     if (transactionType === 'مناقلة') {
+      if (!user.isManager) { alert('غير مصرح لك بالمناقلة'); return; }
       if (!transferFromBox || !transferToBox) { alert('الرجاء تحديد الصندوق المرسل والمستلم'); return; }
       if (transferFromBox.id === transferToBox.id) { alert('لا يمكن المناقلة إلى نفس الصندوق'); return; }
       if (!numAmount || numAmount <= 0) { alert('الرجاء إدخال مبلغ صحيح'); return; }
@@ -100,9 +107,11 @@ function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId }) {
 
         <p style={styles.label}>نوع الحركة</p>
         <div style={styles.typeRow}>
-          <button style={styles.typeBtn(transactionType === 'قبض', 'green')} onClick={() => setTransactionType('قبض')}>💰 قبض</button>
-          <button style={styles.typeBtn(transactionType === 'مناقلة', 'blue')} onClick={() => setTransactionType('مناقلة')}>🔄 مناقلة</button>
-          <button style={styles.typeBtn(transactionType === 'دفع', 'red')} onClick={() => setTransactionType('دفع')}>💸 دفع</button>
+          {transactionTypes.map(t => (
+            <button key={t} style={styles.typeBtn(transactionType === t, t === 'قبض' ? 'green' : t === 'دفع' ? 'red' : 'blue')} onClick={() => setTransactionType(t)}>
+              {t === 'قبض' ? '💰 قبض' : t === 'دفع' ? '💸 دفع' : '🔄 مناقلة'}
+            </button>
+          ))}
         </div>
 
         {transactionType === 'مناقلة' ? (
@@ -143,7 +152,6 @@ function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId }) {
         ))}
       </div>
 
-      {/* Modal المرسل */}
       {showTransferFrom && (
         <div style={styles.modalOverlay} onClick={() => setShowTransferFrom(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -158,7 +166,6 @@ function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId }) {
         </div>
       )}
 
-      {/* Modal المستلم */}
       {showTransferTo && (
         <div style={styles.modalOverlay} onClick={() => setShowTransferTo(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
