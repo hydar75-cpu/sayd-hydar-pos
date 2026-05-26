@@ -48,3 +48,26 @@ export const INITIAL_PERSONS = [
 ];
 
 export const INITIAL_INVOICES = [];
+
+export const DAYS_OF_WEEK = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+export const INITIAL_ROUTES = [
+  {
+    id: 1,
+    salespersonId: 1,
+    day: 'السبت',
+    customers: [
+      { customerId: 2, order: 1, status: 'pending' },
+      { customerId: 3, order: 2, status: 'pending' },
+    ]
+  },
+  {
+    id: 2,
+    salespersonId: 1,
+    day: 'الأحد',
+    customers: [
+      { customerId: 2, order: 1, status: 'pending' },
+      { customerId: 4, order: 2, status: 'pending' },
+    ]
+  },
+];
