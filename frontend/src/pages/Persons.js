@@ -2,14 +2,24 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatNumber } from '../utils/helpers';
 
-function Persons({ persons, setPersons }) {
+function Persons({ user, persons, setPersons }) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState(null);
   const [form, setForm] = useState({ type: 'عميل', name: '', phone: '', address: '' });
 
-  const filteredPersons = persons.filter(p =>
+  // المندوب يرى العملاء فقط، المدير يرى الكل
+  const visiblePersons = user.isManager
+    ? persons
+    : persons.filter(p => p.type === 'عميل');
+
+  // المدير فقط يمكنه إضافة مناديب وموردين
+  const availableTypes = user.isManager
+    ? ['عميل', 'مورد', 'مندوب']
+    : ['عميل'];
+
+  const filteredPersons = visiblePersons.filter(p =>
     p.name.includes(searchTerm) || p.phone.includes(searchTerm)
   );
 
@@ -24,7 +34,19 @@ function Persons({ persons, setPersons }) {
     if (editingPerson) {
       setPersons(persons.map(p => p.id === editingPerson.id ? { ...p, ...form } : p));
     } else {
-      setPersons([...persons, { id: Date.now(), ...form, balance: 0, hasTransactions: false }]);
+      const newPerson = {
+        id: Date.now(),
+        ...form,
+        balance: 0,
+        hasTransactions: false,
+      };
+      // إذا كان المندوب، أضف بيانات المستخدم الافتراضية
+      if (form.type === 'مندوب') {
+        newPerson.username = form.name;
+        newPerson.password = '1';
+        newPerson.isManager = false;
+      }
+      setPersons([...persons, newPerson]);
     }
     resetForm();
   };
@@ -37,12 +59,11 @@ function Persons({ persons, setPersons }) {
 
   const handleDelete = (person) => {
     if (person.hasTransactions) { alert('لا يمكن حذف هذا الشخص لأنه مرتبط بعمليات سابقة'); return; }
+    if (person.isManager) { alert('لا يمكن حذف مدير النظام'); return; }
     if (window.confirm(`هل أنت متأكد من حذف ${person.name}؟`)) {
       setPersons(persons.filter(p => p.id !== person.id));
     }
   };
-
-  const types = ['عميل', 'مورد', 'مندوب'];
 
   const styles = {
     screen: { minHeight: '100vh', backgroundColor: '#f0f4f8' },
@@ -60,18 +81,9 @@ function Persons({ persons, setPersons }) {
     formActions: { display: 'flex', gap: '10px', marginTop: '10px' },
     saveBtn: { flex: 1, padding: '12px', backgroundColor: '#10b981', color: 'white', borderRadius: '12px', border: 'none', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' },
     cancelBtn: { flex: 1, padding: '12px', backgroundColor: 'white', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '16px', fontWeight: '600', cursor: 'pointer', color: '#6b7280' },
-    personCard: (hasTransactions) => ({
-      backgroundColor: 'white', borderRadius: '12px', padding: '15px', marginBottom: '8px',
-      display: 'flex', alignItems: 'center',
-      borderRight: hasTransactions ? '3px solid #8b5cf6' : 'none'
-    }),
+    personCard: (hasTransactions) => ({ backgroundColor: 'white', borderRadius: '12px', padding: '15px', marginBottom: '8px', display: 'flex', alignItems: 'center', borderRight: hasTransactions ? '3px solid #8b5cf6' : 'none' }),
     personName: { fontWeight: '600', fontSize: '15px', color: '#1e3a5f' },
-    badge: (type) => ({
-      display: 'inline-block', padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold',
-      backgroundColor: type === 'عميل' ? '#dbeafe' : type === 'مورد' ? '#fef3c7' : '#d1fae5',
-      color: type === 'عميل' ? '#1e40af' : type === 'مورد' ? '#92400e' : '#065f46',
-      marginRight: '8px'
-    }),
+    badge: (type) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', backgroundColor: type === 'عميل' ? '#dbeafe' : type === 'مورد' ? '#fef3c7' : '#d1fae5', color: type === 'عميل' ? '#1e40af' : type === 'مورد' ? '#92400e' : '#065f46', marginRight: '8px' }),
     personPhone: { fontSize: '12px', color: '#6b7280', marginTop: '4px' },
     personAddress: { fontSize: '12px', color: '#9ca3af', marginTop: '2px' },
     balance: { color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: 'bold' },
@@ -93,7 +105,7 @@ function Persons({ persons, setPersons }) {
           <div style={styles.formCard}>
             <p style={styles.formTitle}>{editingPerson ? 'تعديل شخص' : 'إضافة شخص جديد'}</p>
             <div style={styles.typeSelector}>
-              {types.map(t => (
+              {availableTypes.map(t => (
                 <button key={t} style={styles.typeBtn(form.type === t)}
                   onClick={() => setForm({ ...form, type: t })}>{t}</button>
               ))}
@@ -117,19 +129,27 @@ function Persons({ persons, setPersons }) {
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
                 <span style={styles.personName}>
                   {person.name} {person.hasTransactions ? '🔒' : ''}
+                  {person.isManager ? ' 👑' : ''}
                 </span>
                 <span style={styles.badge(person.type)}>{person.type}</span>
               </div>
               <p style={styles.personPhone}>📞 {person.phone}</p>
               <p style={styles.personAddress}>📍 {person.address || '-'}</p>
+              {person.type === 'مندوب' && user.isManager && (
+                <p style={{ fontSize: '11px', color: '#2563eb', marginTop: '4px' }}>
+                  👤 {person.username} | 🔑 {person.password}
+                </p>
+              )}
               {person.balance > 0 && (
                 <p style={styles.balance}>⚠️ الذمة: {formatNumber(person.balance)} د.ع</p>
               )}
             </div>
-            <div>
-              <button style={styles.iconBtn} onClick={() => handleEdit(person)}>✏️</button>
-              <button style={styles.iconBtn} onClick={() => handleDelete(person)}>🗑️</button>
-            </div>
+            {user.isManager && (
+              <div>
+                <button style={styles.iconBtn} onClick={() => handleEdit(person)}>✏️</button>
+                <button style={styles.iconBtn} onClick={() => handleDelete(person)}>🗑️</button>
+              </div>
+            )}
           </div>
         ))}
       </div>
