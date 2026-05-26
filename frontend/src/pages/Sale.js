@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LocationDisplay from '../components/LocationDisplay';
 import { formatNumber, parseNumber, getCurrentPosition, generateInvoiceNumber } from '../utils/helpers';
 
-function Sale({ user, products, persons, invoices, setInvoices, inventory, setInventory, warehouses, cashBoxes, setCashBoxes, activeCashBoxId }) {
+function Sale({ user, products, persons, invoices, setInvoices, inventory, setInventory, warehouses, cashBoxes, setCashBoxes, activeCashBoxId, selectedCustomer, setSelectedCustomer }) {
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showProducts, setShowProducts] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedCustomerState, setSelectedCustomerState] = useState(null);
   const [showCustomers, setShowCustomers] = useState(false);
   const [discount, setDiscount] = useState('');
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -18,6 +18,14 @@ function Sale({ user, products, persons, invoices, setInvoices, inventory, setIn
   const customers = persons.filter(p => p.type === 'عميل');
   const activeCashBox = cashBoxes.find(cb => cb.id === activeCashBoxId) || cashBoxes[0];
   const userWarehouses = user.isManager ? warehouses : warehouses.filter(w => w.userId === user.userId);
+
+  // استقبال العميل الممر من شاشة خط السير
+  useEffect(() => {
+    if (selectedCustomer) {
+      setSelectedCustomerState(selectedCustomer);
+      setSelectedCustomer(null);
+    }
+  }, [selectedCustomer, setSelectedCustomer]);
 
   const filteredProducts = products.filter(p =>
     p.name.includes(searchTerm) || p.code.includes(searchTerm) || p.barcode.includes(searchTerm)
@@ -65,7 +73,7 @@ function Sale({ user, products, persons, invoices, setInvoices, inventory, setIn
 
   const handleSave = async () => {
     if (cart.length === 0) { alert('السلة فارغة'); return; }
-    if (!selectedCustomer) { alert('الرجاء اختيار العميل'); return; }
+    if (!selectedCustomerState) { alert('الرجاء اختيار العميل'); return; }
     for (const item of cart) {
       const stock = getStockForProduct(item.productId, item.warehouseId);
       if (item.qty > stock) { alert(`المخزون غير كافٍ لمادة "${item.name}"`); return; }
@@ -92,14 +100,14 @@ function Sale({ user, products, persons, invoices, setInvoices, inventory, setIn
 
     const newInvoice = {
       id: Date.now(), number: generateInvoiceNumber(invoices.length),
-      customerId: selectedCustomer.id, salespersonId: user?.salespersonId,
+      customerId: selectedCustomerState.id, salespersonId: user?.salespersonId,
       date: new Date().toISOString().split('T')[0],
       items: cart.map(i => ({ productId: i.productId, name: i.name, qty: i.qty, price: i.price, total: i.total, warehouseId: i.warehouseId })),
       total: subtotal, discount: discountNum, finalTotal, saleType, location,
     };
     setInvoices([...invoices, newInvoice]);
     alert(`تم حفظ الفاتورة ${newInvoice.number}\nالإجمالي: ${formatNumber(finalTotal)} د.ع`);
-    setCart([]); setSelectedCustomer(null); setDiscount(''); setSaleType('نقدي');
+    setCart([]); setSelectedCustomerState(null); setDiscount(''); setSaleType('نقدي');
   };
 
   const styles = {
@@ -150,7 +158,7 @@ function Sale({ user, products, persons, invoices, setInvoices, inventory, setIn
         </div>
 
         <button style={styles.selectBtn} onClick={() => setShowCustomers(true)}>
-          {selectedCustomer ? `👤 ${selectedCustomer.name}` : '👤 اختر العميل'}
+          {selectedCustomerState ? `👤 ${selectedCustomerState.name}` : '👤 اختر العميل'}
         </button>
 
         <input style={styles.searchInput} placeholder="🔍 بحث باسم، رمز، أو باركود..." value={searchTerm}
@@ -209,7 +217,7 @@ function Sale({ user, products, persons, invoices, setInvoices, inventory, setIn
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <p style={styles.modalTitle}>اختر العميل</p>
             {customers.map(c => (
-              <div key={c.id} style={styles.modalItem} onClick={() => { setSelectedCustomer(c); setShowCustomers(false); }}>
+              <div key={c.id} style={styles.modalItem} onClick={() => { setSelectedCustomerState(c); setShowCustomers(false); }}>
                 {c.name} {c.balance > 0 ? `(ذمة: ${formatNumber(c.balance)})` : ''}
               </div>
             ))}
