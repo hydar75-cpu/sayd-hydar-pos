@@ -1,86 +1,155 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DAYS_OF_WEEK } from '../data/initialData';
 
 function RouteSettings({ onBack, persons, routes, setRoutes }) {
   const [selectedSalesperson, setSelectedSalesperson] = useState(null);
-  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedDays, setSelectedDays] = useState([]);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [previewCustomers, setPreviewCustomers] = useState([]);
 
   const salespersons = persons.filter(p => p.type === 'مندوب');
   const customers = persons.filter(p => p.type === 'عميل');
 
   const handleSelectSalesperson = (sp) => {
     setSelectedSalesperson(sp);
-    setSelectedDay(null);
-    setSelectedRoute(null);
+    setSelectedDays([]);
+    setPreviewCustomers([]);
   };
 
-  const handleSelectDay = (day) => {
-    setSelectedDay(day);
-    const existingRoute = routes.find(
-      r => r.salespersonId === selectedSalesperson.id && r.day === day
-    );
-    setSelectedRoute(existingRoute || null);
+  const toggleDay = (day) => {
+    setSelectedDays(prev => {
+      if (prev.includes(day)) {
+        return prev.filter(d => d !== day);
+      } else {
+        return [...prev, day];
+      }
+    });
   };
+
+  // تحميل عملاء اليوم الأول من الأيام المحددة كمعاينة
+  useEffect(() => {
+    if (selectedDays.length > 0 && selectedSalesperson) {
+      const firstDay = selectedDays[0];
+      const existingRoute = routes.find(
+        r => r.salespersonId === selectedSalesperson.id && r.day === firstDay
+      );
+      if (existingRoute) {
+        setPreviewCustomers(existingRoute.customers.map(c => ({
+          ...c,
+          name: getCustomerInfo(c.customerId)?.name || '',
+          address: getCustomerInfo(c.customerId)?.address || ''
+        })));
+      } else {
+        setPreviewCustomers([]);
+      }
+    } else {
+      setPreviewCustomers([]);
+    }
+  }, [selectedDays, selectedSalesperson, routes]);
 
   const getCustomerInfo = (customerId) => {
     return persons.find(p => p.id === customerId);
   };
 
   const getAvailableCustomers = () => {
-    if (!selectedDay || !selectedSalesperson) return [];
-    const allRoutesForDay = routes.filter(r => r.day === selectedDay && r.id !== selectedRoute?.id);
+    if (selectedDays.length === 0 || !selectedSalesperson) return [];
     const assignedCustomerIds = new Set();
-    allRoutesForDay.forEach(r => {
-      r.customers.forEach(c => assignedCustomerIds.add(c.customerId));
+    selectedDays.forEach(day => {
+      const allRoutesForDay = routes.filter(r => r.day === day && r.salespersonId !== selectedSalesperson.id);
+      allRoutesForDay.forEach(r => {
+        r.customers.forEach(c => assignedCustomerIds.add(c.customerId));
+      });
     });
     return customers.filter(c => !assignedCustomerIds.has(c.id));
   };
 
   const handleAddCustomer = (customerId) => {
-    if (!selectedRoute) {
-      const newRoute = {
-        id: Date.now(),
-        salespersonId: selectedSalesperson.id,
-        day: selectedDay,
-        customers: [{ customerId, order: 1, status: 'pending' }]
-      };
-      setRoutes([...routes, newRoute]);
-      setSelectedRoute(newRoute);
-    } else {
-      const maxOrder = selectedRoute.customers.reduce((max, c) => Math.max(max, c.order), 0);
-      const updatedRoute = {
-        ...selectedRoute,
-        customers: [...selectedRoute.customers, { customerId, order: maxOrder + 1, status: 'pending' }]
-      };
-      setRoutes(routes.map(r => r.id === selectedRoute.id ? updatedRoute : r));
-      setSelectedRoute(updatedRoute);
-    }
+    const customer = getCustomerInfo(customerId);
+    if (!customer) return;
+
+    const maxOrder = previewCustomers.reduce((max, c) => Math.max(max, c.order), 0);
+    const newCustomer = { customerId, order: maxOrder + 1, status: 'pending', notes: '', name: customer.name, address: customer.address || '' };
+    const updatedPreview = [...previewCustomers, newCustomer];
+    setPreviewCustomers(updatedPreview);
+
+    // تطبيق على جميع الأيام المحددة
+    setRoutes(prevRoutes => {
+      let newRoutes = [...prevRoutes];
+      selectedDays.forEach(day => {
+        const existingRouteIndex = newRoutes.findIndex(
+          r => r.salespersonId === selectedSalesperson.id && r.day === day
+        );
+        if (existingRouteIndex >= 0) {
+          const existingRoute = newRoutes[existingRouteIndex];
+          const existingCustomerIds = new Set(existingRoute.customers.map(c => c.customerId));
+          if (!existingCustomerIds.has(customerId)) {
+            const maxOrderDay = existingRoute.customers.reduce((max, c) => Math.max(max, c.order), 0);
+            newRoutes[existingRouteIndex] = {
+              ...existingRoute,
+              customers: [...existingRoute.customers, { customerId, order: maxOrderDay + 1, status: 'pending', notes: '' }]
+            };
+          }
+        } else {
+          newRoutes.push({
+            id: Date.now() + Math.random(),
+            salespersonId: selectedSalesperson.id,
+            day: day,
+            customers: [{ customerId, order: 1, status: 'pending', notes: '' }]
+          });
+        }
+      });
+      return newRoutes;
+    });
   };
 
   const handleRemoveCustomer = (customerId) => {
-    if (!selectedRoute) return;
-    const updatedCustomers = selectedRoute.customers
-      .filter(c => c.customerId !== customerId)
-      .map((c, index) => ({ ...c, order: index + 1 }));
-    const updatedRoute = { ...selectedRoute, customers: updatedCustomers };
-    setRoutes(routes.map(r => r.id === selectedRoute.id ? updatedRoute : r));
-    setSelectedRoute(updatedRoute);
+    setPreviewCustomers(prev => {
+      const updated = prev.filter(c => c.customerId !== customerId).map((c, i) => ({ ...c, order: i + 1 }));
+      return updated;
+    });
+
+    // حذف من جميع الأيام المحددة
+    setRoutes(prevRoutes => {
+      return prevRoutes.map(r => {
+        if (selectedDays.includes(r.day) && r.salespersonId === selectedSalesperson.id) {
+          const updatedCustomers = r.customers
+            .filter(c => c.customerId !== customerId)
+            .map((c, i) => ({ ...c, order: i + 1 }));
+          return { ...r, customers: updatedCustomers };
+        }
+        return r;
+      });
+    });
   };
 
   const handleMoveCustomer = (customerId, direction) => {
-    if (!selectedRoute) return;
-    const customers = [...selectedRoute.customers].sort((a, b) => a.order - b.order);
-    const index = customers.findIndex(c => c.customerId === customerId);
+    const sorted = [...previewCustomers].sort((a, b) => a.order - b.order);
+    const index = sorted.findIndex(c => c.customerId === customerId);
     if (direction === 'up' && index > 0) {
-      [customers[index - 1].order, customers[index].order] = [customers[index].order, customers[index - 1].order];
-    } else if (direction === 'down' && index < customers.length - 1) {
-      [customers[index + 1].order, customers[index].order] = [customers[index].order, customers[index + 1].order];
+      const temp = sorted[index - 1].order;
+      sorted[index - 1].order = sorted[index].order;
+      sorted[index].order = temp;
+    } else if (direction === 'down' && index < sorted.length - 1) {
+      const temp = sorted[index + 1].order;
+      sorted[index + 1].order = sorted[index].order;
+      sorted[index].order = temp;
     }
-    const updatedRoute = { ...selectedRoute, customers: [...customers] };
-    setRoutes(routes.map(r => r.id === selectedRoute.id ? updatedRoute : r));
-    setSelectedRoute(updatedRoute);
+    const updatedPreview = [...sorted].sort((a, b) => a.order - b.order);
+    setPreviewCustomers(updatedPreview);
+
+    // تحديث الترتيب في جميع الأيام المحددة
+    setRoutes(prevRoutes => {
+      return prevRoutes.map(r => {
+        if (selectedDays.includes(r.day) && r.salespersonId === selectedSalesperson.id) {
+          const updatedCustomers = r.customers.map(c => {
+            const found = updatedPreview.find(p => p.customerId === c.customerId);
+            return found ? { ...c, order: found.order } : c;
+          });
+          return { ...r, customers: updatedCustomers };
+        }
+        return r;
+      });
+    });
   };
 
   const styles = {
@@ -89,10 +158,11 @@ function RouteSettings({ onBack, persons, routes, setRoutes }) {
     backBtn: { background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer' },
     title: { fontSize: '18px', fontWeight: 'bold' },
     content: { padding: '15px' },
-    label: { fontWeight: '600', color: '#374151', marginBottom: '8px', fontSize: '14px' },
+    label: { fontWeight: '600', color: '#374151', marginBottom: '8px', fontSize: '14px', marginTop: '15px' },
     list: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' },
     chip: (active) => ({ padding: '8px 14px', borderRadius: '20px', border: '2px solid #e5e7eb', cursor: 'pointer', fontSize: '13px', backgroundColor: active ? '#dbeafe' : 'white', borderColor: active ? '#2563eb' : '#e5e7eb', color: active ? '#1e40af' : '#374151', fontWeight: active ? 'bold' : 'normal' }),
-    dayChip: (active) => ({ padding: '8px 12px', borderRadius: '20px', border: '2px solid #e5e7eb', cursor: 'pointer', fontSize: '12px', backgroundColor: active ? '#ede9fe' : 'white', borderColor: active ? '#8b5cf6' : '#e5e7eb', color: active ? '#5b21b6' : '#374151', fontWeight: active ? 'bold' : 'normal' }),
+    dayCheckbox: (active) => ({ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '20px', border: '2px solid #e5e7eb', cursor: 'pointer', fontSize: '12px', backgroundColor: active ? '#ede9fe' : 'white', borderColor: active ? '#8b5cf6' : '#e5e7eb', color: active ? '#5b21b6' : '#374151', fontWeight: active ? 'bold' : 'normal' }),
+    checkbox: { margin: 0, cursor: 'pointer' },
     customerCard: { backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
     customerName: { fontWeight: '600', fontSize: '14px' },
     smallBtn: { padding: '4px 8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '600' },
@@ -102,6 +172,8 @@ function RouteSettings({ onBack, persons, routes, setRoutes }) {
     modalTitle: { fontWeight: 'bold', fontSize: '18px', textAlign: 'center', marginBottom: '15px' },
     modalItem: { padding: '15px', borderBottom: '1px solid #f0f4f8', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     closeBtn: { marginTop: '15px', padding: '12px', backgroundColor: '#f0f4f8', borderRadius: '12px', textAlign: 'center', cursor: 'pointer' },
+    emptyState: { textAlign: 'center', padding: '20px', color: '#6b7280', fontSize: '13px' },
+    dayBadge: (active) => ({ display: 'inline-block', padding: '4px 10px', borderRadius: '10px', fontSize: '11px', marginRight: '6px', backgroundColor: active ? '#ede9fe' : '#f0f4f8', color: active ? '#5b21b6' : '#6b7280' }),
   };
 
   return (
@@ -123,33 +195,44 @@ function RouteSettings({ onBack, persons, routes, setRoutes }) {
 
         {selectedSalesperson && (
           <>
-            <p style={styles.label}>اختر اليوم</p>
+            <p style={styles.label}>اختر الأيام (يمكنك اختيار عدة أيام)</p>
             <div style={styles.list}>
               {DAYS_OF_WEEK.map(day => (
-                <button key={day} style={styles.dayChip(selectedDay === day)} onClick={() => handleSelectDay(day)}>
+                <label key={day} style={styles.dayCheckbox(selectedDays.includes(day))} onClick={() => toggleDay(day)}>
+                  <input
+                    type="checkbox"
+                    checked={selectedDays.includes(day)}
+                    onChange={() => toggleDay(day)}
+                    style={styles.checkbox}
+                  />
                   {day}
-                </button>
+                </label>
               ))}
             </div>
           </>
         )}
 
-        {selectedDay && selectedSalesperson && (
+        {selectedDays.length > 0 && selectedSalesperson && (
           <>
-            <p style={{ ...styles.label, marginTop: '15px' }}>
-              عملاء {selectedDay} - {selectedSalesperson.name}
+            <p style={{ ...styles.label, marginTop: '10px' }}>
+              خطة {selectedSalesperson.name}
             </p>
+            <div style={{ marginBottom: '8px' }}>
+              {selectedDays.map(day => (
+                <span key={day} style={styles.dayBadge(true)}>{day}</span>
+              ))}
+            </div>
 
-            {selectedRoute && selectedRoute.customers
-              .sort((a, b) => a.order - b.order)
-              .map((rc, index) => {
-                const customer = getCustomerInfo(rc.customerId);
-                if (!customer) return null;
-                return (
+            {previewCustomers.length === 0 ? (
+              <p style={styles.emptyState}>لا يوجد عملاء. أضف عملاء جدد.</p>
+            ) : (
+              previewCustomers
+                .sort((a, b) => a.order - b.order)
+                .map((rc, index) => (
                   <div key={rc.customerId} style={styles.customerCard}>
                     <div style={{ flex: 1 }}>
-                      <p style={styles.customerName}>{index + 1}. {customer.name}</p>
-                      <p style={{ fontSize: '11px', color: '#6b7280' }}>{customer.address}</p>
+                      <p style={styles.customerName}>{index + 1}. {rc.name}</p>
+                      <p style={{ fontSize: '11px', color: '#6b7280' }}>{rc.address}</p>
                     </div>
                     <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
                       <button style={{ ...styles.smallBtn, backgroundColor: '#dbeafe', color: '#1e40af' }} onClick={() => handleMoveCustomer(rc.customerId, 'up')}>⬆</button>
@@ -157,8 +240,8 @@ function RouteSettings({ onBack, persons, routes, setRoutes }) {
                       <button style={{ ...styles.smallBtn, backgroundColor: '#fef2f2', color: '#991b1b' }} onClick={() => handleRemoveCustomer(rc.customerId)}>✕</button>
                     </div>
                   </div>
-                );
-              })}
+                ))
+            )}
 
             <button style={styles.addBtn} onClick={() => setShowAddCustomer(true)}>
               + إضافة عميل
@@ -171,13 +254,16 @@ function RouteSettings({ onBack, persons, routes, setRoutes }) {
         <div style={styles.modalOverlay} onClick={() => setShowAddCustomer(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <p style={styles.modalTitle}>إضافة عميل</p>
+            <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', marginBottom: '10px' }}>
+              سيتم إضافة العميل إلى: {selectedDays.join('، ')}
+            </p>
             {getAvailableCustomers().length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#6b7280' }}>لا يوجد عملاء متاحين لهذا اليوم</p>
+              <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>لا يوجد عملاء متاحين للأيام المحددة</p>
             ) : (
               getAvailableCustomers().map(c => (
                 <div key={c.id} style={styles.modalItem} onClick={() => { handleAddCustomer(c.id); setShowAddCustomer(false); }}>
                   <span>{c.name}</span>
-                  <span style={{ fontSize: '11px', color: '#6b7280' }}>{c.address}</span>
+                  <span style={{ fontSize: '11px', color: '#6b7280' }}>{c.address || '-'}</span>
                 </div>
               ))
             )}
