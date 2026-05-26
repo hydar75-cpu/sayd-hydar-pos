@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DAYS_OF_WEEK } from '../data/initialData';
 
-function Route({ user, routes, setRoutes, persons, setSelectedCustomer }) {
+function Route({ user, routes, setRoutes, persons, setSelectedCustomer, setPendingCash }) {
   const navigate = useNavigate();
+  const [cancelModal, setCancelModal] = useState(null);
+  const [cancelNotes, setCancelNotes] = useState('');
 
   const todayIndex = new Date().getDay();
   const adjustedIndex = todayIndex === 0 ? 6 : todayIndex - 1;
@@ -17,13 +19,13 @@ function Route({ user, routes, setRoutes, persons, setSelectedCustomer }) {
     return persons.find(p => p.id === customerId);
   };
 
-  const updateStatus = (routeId, customerId, newStatus) => {
+  const updateStatus = (routeId, customerId, newStatus, notes = '') => {
     setRoutes(routes.map(r => {
       if (r.id === routeId) {
         return {
           ...r,
           customers: r.customers.map(c =>
-            c.customerId === customerId ? { ...c, status: newStatus } : c
+            c.customerId === customerId ? { ...c, status: newStatus, notes: notes } : c
           )
         };
       }
@@ -39,6 +41,26 @@ function Route({ user, routes, setRoutes, persons, setSelectedCustomer }) {
   const startSale = (customer) => {
     setSelectedCustomer(customer);
     navigate('/sale');
+  };
+
+  const startCash = (customer) => {
+    setPendingCash({ type: 'قبض', customer: customer });
+    navigate('/cash');
+  };
+
+  const handleCancelClick = (routeId, customerId) => {
+    setCancelModal({ routeId, customerId });
+    setCancelNotes('');
+  };
+
+  const confirmCancel = () => {
+    if (!cancelNotes.trim()) {
+      alert('الرجاء ذكر سبب الإلغاء في الملاحظات');
+      return;
+    }
+    updateStatus(cancelModal.routeId, cancelModal.customerId, 'cancelled', cancelNotes);
+    setCancelModal(null);
+    setCancelNotes('');
   };
 
   const getStatusIcon = (status) => {
@@ -72,9 +94,18 @@ function Route({ user, routes, setRoutes, persons, setSelectedCustomer }) {
     customerName: { fontWeight: '600', fontSize: '16px', color: '#1e3a5f' },
     customerInfo: { fontSize: '13px', color: '#6b7280', marginTop: '5px' },
     actions: { display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' },
-    actionBtn: (color) => ({ padding: '8px 12px', backgroundColor: color, color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }),
+    actionBtn: (color) => ({ padding: '8px 12px', backgroundColor: color, color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }),
     statusBadge: (status) => ({ display: 'inline-block', padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', backgroundColor: status === 'done' ? '#d1fae5' : status === 'cancelled' ? '#fef2f2' : '#fef3c7', color: status === 'done' ? '#065f46' : status === 'cancelled' ? '#991b1b' : '#92400e' }),
     emptyState: { textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '12px', color: '#6b7280', fontSize: '16px' },
+    notes: { fontSize: '12px', color: '#ef4444', marginTop: '6px', fontStyle: 'italic' },
+    modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' },
+    modalContent: { backgroundColor: 'white', borderRadius: '16px', padding: '20px', width: '100%', maxWidth: '400px' },
+    modalTitle: { fontWeight: 'bold', fontSize: '18px', textAlign: 'center', marginBottom: '15px', color: '#ef4444' },
+    modalText: { textAlign: 'center', marginBottom: '15px', color: '#374151', fontSize: '14px' },
+    textarea: { width: '100%', padding: '12px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '14px', textAlign: 'right', marginBottom: '10px', minHeight: '80px', resize: 'vertical' },
+    formActions: { display: 'flex', gap: '10px' },
+    confirmBtn: { flex: 1, padding: '12px', backgroundColor: '#ef4444', color: 'white', borderRadius: '12px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' },
+    cancelBtn: { flex: 1, padding: '12px', backgroundColor: 'white', borderRadius: '12px', border: '2px solid #e5e7eb', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#6b7280' },
   };
 
   return (
@@ -117,25 +148,29 @@ function Route({ user, routes, setRoutes, persons, setSelectedCustomer }) {
                       </div>
                       <p style={styles.customerInfo}>📞 {customer.phone}</p>
                       <p style={styles.customerInfo}>📍 {customer.address}</p>
+                      {rc.notes && (
+                        <p style={styles.notes}>📝 {rc.notes}</p>
+                      )}
 
-                      <div style={styles.actions}>
-                        <button style={styles.actionBtn('#3b82f6')} onClick={() => openWaze(customer.address)}>
-                          🚗 Waze
-                        </button>
-                        <button style={styles.actionBtn('#10b981')} onClick={() => startSale(customer)}>
-                          🛒 بدء البيع
-                        </button>
-                        {rc.status === 'pending' && (
-                          <>
-                            <button style={styles.actionBtn('#10b981')} onClick={() => updateStatus(route.id, rc.customerId, 'done')}>
-                              ✅ تمت
-                            </button>
-                            <button style={styles.actionBtn('#ef4444')} onClick={() => updateStatus(route.id, rc.customerId, 'cancelled')}>
-                              ❌ إلغاء
-                            </button>
-                          </>
-                        )}
-                      </div>
+                      {rc.status === 'pending' && (
+                        <div style={styles.actions}>
+                          <button style={styles.actionBtn('#3b82f6')} onClick={() => openWaze(customer.address)}>
+                            🚗 Waze
+                          </button>
+                          <button style={styles.actionBtn('#10b981')} onClick={() => startSale(customer)}>
+                            🛒 بيع
+                          </button>
+                          <button style={styles.actionBtn('#f59e0b')} onClick={() => startCash(customer)}>
+                            💰 قبض
+                          </button>
+                          <button style={styles.actionBtn('#10b981')} onClick={() => updateStatus(route.id, rc.customerId, 'done')}>
+                            ✅ تمت
+                          </button>
+                          <button style={styles.actionBtn('#ef4444')} onClick={() => handleCancelClick(route.id, rc.customerId)}>
+                            ❌ إلغاء
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -143,6 +178,32 @@ function Route({ user, routes, setRoutes, persons, setSelectedCustomer }) {
           ))
         )}
       </div>
+
+      {/* Modal تأكيد الإلغاء */}
+      {cancelModal && (
+        <div style={styles.modalOverlay} onClick={() => setCancelModal(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <p style={styles.modalTitle}>❌ تأكيد إلغاء الزيارة</p>
+            <p style={styles.modalText}>
+              هل أنت متأكد من إلغاء زيارة العميل "{getCustomerInfo(cancelModal.customerId)?.name}"؟
+            </p>
+            <textarea
+              style={styles.textarea}
+              placeholder="الرجاء ذكر سبب الإلغاء (إجباري)..."
+              value={cancelNotes}
+              onChange={(e) => setCancelNotes(e.target.value)}
+            />
+            <div style={styles.formActions}>
+              <button style={styles.confirmBtn} onClick={confirmCancel}>
+                تأكيد الإلغاء
+              </button>
+              <button style={styles.cancelBtn} onClick={() => setCancelModal(null)}>
+                تراجع
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
