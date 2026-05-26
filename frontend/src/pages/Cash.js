@@ -161,4 +161,19 @@ function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId }) {
       {/* Modal المستلم */}
       {showTransferTo && (
         <div style={styles.modalOverlay} onClick={() => setShowTransferTo(false)}>
-          <div style={styles.modalContent} onClick
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <p style={styles.modalTitle}>اختر الصندوق المستلم</p>
+            {availableCashBoxes.map(cb => (
+              <div key={cb.id} style={styles.modalItem} onClick={() => { setTransferToBox(cb); setShowTransferTo(false); }}>
+                {cb.name}
+              </div>
+            ))}
+            <div style={styles.closeBtn} onClick={() => setShowTransferTo(false)}>إغلاق</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Cash;
