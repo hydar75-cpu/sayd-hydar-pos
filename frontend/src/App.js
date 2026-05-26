@@ -42,6 +42,13 @@ function App() {
     return <Login onLogin={handleLogin} persons={persons} />;
   }
 
+  // حماية الطرق - المندوب لا يصل للمشتريات والمواد وضبط النظام
+  const canAccess = (path) => {
+    if (user.isManager) return true;
+    if (['/settings', '/purchase', '/products'].includes(path)) return false;
+    return true;
+  };
+
   return (
     <Router>
       <div className="app-container">
@@ -52,33 +59,41 @@ function App() {
               warehouses={warehouses} inventory={inventory} />
           } />
           <Route path="/sale" element={
-            <Sale user={user} products={products} persons={persons}
+            canAccess('/sale') ? <Sale user={user} products={products} persons={persons}
               invoices={invoices} setInvoices={setInvoices}
               inventory={inventory} setInventory={setInventory}
               warehouses={warehouses} cashBoxes={cashBoxes}
               setCashBoxes={setCashBoxes} activeCashBoxId={activeCashBoxId} />
+            : <Navigate to="/" />
           } />
           <Route path="/purchase" element={
-            <Purchase user={user} products={products} persons={persons}
+            canAccess('/purchase') ? <Purchase user={user} products={products} persons={persons}
               inventory={inventory} setInventory={setInventory}
               warehouses={warehouses} cashBoxes={cashBoxes}
               setCashBoxes={setCashBoxes} activeCashBoxId={activeCashBoxId} />
+            : <Navigate to="/" />
           } />
           <Route path="/return" element={
-            <Return invoices={invoices} inventory={inventory} setInventory={setInventory} />
+            canAccess('/return') ? <Return invoices={invoices} inventory={inventory} setInventory={setInventory} />
+            : <Navigate to="/" />
           } />
           <Route path="/cash" element={
-            <Cash user={user} cashBoxes={cashBoxes} setCashBoxes={setCashBoxes}
+            canAccess('/cash') ? <Cash user={user} cashBoxes={cashBoxes} setCashBoxes={setCashBoxes}
               activeCashBoxId={activeCashBoxId} />
+            : <Navigate to="/" />
           } />
           <Route path="/products" element={
-            <Products products={products} setProducts={setProducts} />
+            canAccess('/products') ? <Products products={products} setProducts={setProducts} />
+            : <Navigate to="/" />
           } />
           <Route path="/persons" element={
-            <Persons persons={persons} setPersons={setPersons} />
+            canAccess('/persons') ? <Persons user={user} persons={persons} setPersons={setPersons} />
+            : <Navigate to="/" />
           } />
           <Route path="/settings" element={
-            <Settings warehouses={warehouses} setWarehouses={setWarehouses} />
+            canAccess('/settings') ? <Settings user={user} warehouses={warehouses} setWarehouses={setWarehouses}
+              persons={persons} setPersons={setPersons} />
+            : <Navigate to="/" />
           } />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
