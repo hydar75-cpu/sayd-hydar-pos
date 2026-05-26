@@ -1,28 +1,36 @@
 import React, { useState } from 'react';
 
 function Login({ onLogin, persons }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [selectedPerson, setSelectedPerson] = useState(null);
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const salespersons = persons.filter(p => p.type === 'مندوب');
 
   const handleLogin = () => {
+    setError('');
+    
     if (!selectedPerson) {
-      setError('الرجاء اختيار المندوب');
+      setError('الرجاء اختيار المستخدم');
       return;
     }
-    if (!username || !password) {
-      setError('الرجاء إدخال اسم المستخدم وكلمة المرور');
+    if (!password) {
+      setError('الرجاء إدخال كلمة المرور');
       return;
     }
+    if (password !== selectedPerson.password) {
+      setError('كلمة المرور غير صحيحة');
+      return;
+    }
+
     onLogin({
+      id: selectedPerson.id,
       full_name: selectedPerson.name,
+      username: selectedPerson.username,
       role: 'مندوب',
       salespersonId: selectedPerson.id,
       userId: selectedPerson.id,
-      isManager: selectedPerson.id === 5
+      isManager: selectedPerson.isManager || false,
     });
   };
 
@@ -58,9 +66,9 @@ function Login({ onLogin, persons }) {
 
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#374151', fontSize: '14px' }}>
-            اختر المندوب
+            اختر المستخدم
           </label>
-          <div style={{ maxHeight: '150px', overflowY: 'auto', border: '2px solid #e5e7eb', borderRadius: '12px' }}>
+          <div style={{ maxHeight: '200px', overflowY: 'auto', border: '2px solid #e5e7eb', borderRadius: '12px' }}>
             {salespersons.map(sp => (
               <div
                 key={sp.id}
@@ -71,26 +79,14 @@ function Login({ onLogin, persons }) {
                   fontSize: '14px'
                 }}
               >
-                {sp.name} {sp.id === 5 ? '(مدير النظام)' : ''}
+                <strong>{sp.name}</strong>
+                {sp.isManager && <span style={{ color: '#2563eb', fontSize: '11px', marginRight: '6px' }}>(مدير النظام)</span>}
+                <span style={{ display: 'block', fontSize: '11px', color: '#6b7280' }}>
+                  👤 {sp.username}
+                </span>
               </div>
             ))}
           </div>
-        </div>
-
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#374151', fontSize: '14px' }}>
-            اسم المستخدم
-          </label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="أدخل اسم المستخدم"
-            style={{
-              width: '100%', padding: '12px', border: '2px solid #e5e7eb',
-              borderRadius: '12px', fontSize: '16px', textAlign: 'right'
-            }}
-          />
         </div>
 
         <div style={{ marginBottom: '20px' }}>
@@ -122,7 +118,7 @@ function Login({ onLogin, persons }) {
       </div>
 
       <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '30px', fontSize: '12px' }}>
-        نسخة تجريبية
+        نظام سيد حيدر - إدارة الشركات
       </p>
     </div>
   );
