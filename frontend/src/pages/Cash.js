@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LocationDisplay from '../components/LocationDisplay';
 import { formatNumber, parseNumber, getCurrentPosition } from '../utils/helpers';
 
-function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId }) {
+function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId, pendingCash, setPendingCash }) {
   const navigate = useNavigate();
   const [amount, setAmount] = useState('');
   const [transactionType, setTransactionType] = useState('قبض');
@@ -19,11 +19,20 @@ function Cash({ user, cashBoxes, setCashBoxes, activeCashBoxId }) {
   const activeCashBox = cashBoxes.find(cb => cb.id === activeCashBoxId) || cashBoxes[0];
   const availableCashBoxes = user.isManager ? cashBoxes : cashBoxes.filter(cb => cb.userId === user.userId);
 
-  // المندوب العادي: قبض ودفع فقط
-  // المدير: قبض، دفع، مناقلة
   const transactionTypes = user.isManager
     ? ['قبض', 'مناقلة', 'دفع']
     : ['قبض', 'دفع'];
+
+  // استقبال بيانات من خط السير
+  useEffect(() => {
+    if (pendingCash) {
+      setTransactionType(pendingCash.type || 'قبض');
+      if (pendingCash.customer) {
+        setNotes(`عميل: ${pendingCash.customer.name}`);
+      }
+      setPendingCash(null);
+    }
+  }, [pendingCash, setPendingCash]);
 
   const getLocation = async () => {
     setLoadingLocation(true);
