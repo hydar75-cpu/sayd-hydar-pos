@@ -57,8 +57,8 @@ export const INITIAL_ROUTES = [
     salespersonId: 1,
     day: 'السبت',
     customers: [
-      { customerId: 2, order: 1, status: 'pending' },
-      { customerId: 3, order: 2, status: 'pending' },
+      { customerId: 2, order: 1, status: 'pending', notes: '' },
+      { customerId: 3, order: 2, status: 'pending', notes: '' },
     ]
   },
   {
@@ -66,8 +66,8 @@ export const INITIAL_ROUTES = [
     salespersonId: 1,
     day: 'الأحد',
     customers: [
-      { customerId: 2, order: 1, status: 'pending' },
-      { customerId: 4, order: 2, status: 'pending' },
+      { customerId: 2, order: 1, status: 'pending', notes: '' },
+      { customerId: 4, order: 2, status: 'pending', notes: '' },
     ]
   },
 ];
