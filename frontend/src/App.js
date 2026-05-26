@@ -9,9 +9,10 @@ import Cash from './pages/Cash';
 import Products from './pages/Products';
 import Persons from './pages/Persons';
 import Settings from './pages/Settings';
+import RoutePage from './pages/Route';
 import {
   INITIAL_PRODUCTS, INITIAL_WAREHOUSES, INITIAL_CASHBOXES,
-  INITIAL_INVENTORY, INITIAL_PERSONS, INITIAL_INVOICES
+  INITIAL_INVENTORY, INITIAL_PERSONS, INITIAL_INVOICES, INITIAL_ROUTES
 } from './data/initialData';
 import './App.css';
 
@@ -25,6 +26,8 @@ function App() {
   const [warehouses, setWarehouses] = useState(INITIAL_WAREHOUSES);
   const [cashBoxes, setCashBoxes] = useState(INITIAL_CASHBOXES);
   const [activeCashBoxId, setActiveCashBoxId] = useState(INITIAL_CASHBOXES[0].id);
+  const [routes, setRoutes] = useState(INITIAL_ROUTES);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const handleLogin = (userData) => {
     setUser(userData);
@@ -42,10 +45,9 @@ function App() {
     return <Login onLogin={handleLogin} persons={persons} />;
   }
 
-  // حماية الطرق - المندوب لا يصل للمشتريات والمواد وضبط النظام
   const canAccess = (path) => {
     if (user.isManager) return true;
-    if (['/settings', '/purchase', '/products'].includes(path)) return false;
+    if (['/settings', '/purchase', '/products', '/persons'].includes(path)) return false;
     return true;
   };
 
@@ -63,7 +65,8 @@ function App() {
               invoices={invoices} setInvoices={setInvoices}
               inventory={inventory} setInventory={setInventory}
               warehouses={warehouses} cashBoxes={cashBoxes}
-              setCashBoxes={setCashBoxes} activeCashBoxId={activeCashBoxId} />
+              setCashBoxes={setCashBoxes} activeCashBoxId={activeCashBoxId}
+              selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} />
             : <Navigate to="/" />
           } />
           <Route path="/purchase" element={
@@ -90,9 +93,13 @@ function App() {
             canAccess('/persons') ? <Persons user={user} persons={persons} setPersons={setPersons} />
             : <Navigate to="/" />
           } />
+          <Route path="/route" element={
+            <RoutePage user={user} routes={routes} setRoutes={setRoutes}
+              persons={persons} setSelectedCustomer={setSelectedCustomer} />
+          } />
           <Route path="/settings" element={
             canAccess('/settings') ? <Settings user={user} warehouses={warehouses} setWarehouses={setWarehouses}
-              persons={persons} setPersons={setPersons} />
+              persons={persons} setPersons={setPersons} routes={routes} setRoutes={setRoutes} />
             : <Navigate to="/" />
           } />
           <Route path="*" element={<Navigate to="/" />} />
