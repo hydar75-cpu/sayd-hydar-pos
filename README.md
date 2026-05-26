@@ -1,1 +1,0 @@
-# sayd-hydar-pos
